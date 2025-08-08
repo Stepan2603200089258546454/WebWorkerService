@@ -1,4 +1,5 @@
 ﻿@page "/"
+@using WebWorkerService.Configurations
 @using WorkersLib.Interfaces
 @using WorkersLib.Models
 @rendermode InteractiveServer
@@ -6,185 +7,221 @@
 
 <PageTitle>Home</PageTitle>
 
-<div class="card mb-3">
-    <div class="card-header">
-        <div class="row">
+<p>RenderMode: @RendererInfo.Name</p>
 
-            <div class="col d-flex align-items-center justify-content-start">
-                <h5 class="m-0">Расписание работ [Авто обновление @_refreshSeconds сек]</h5>
-            </div>
+@if (RendererInfo.IsInteractive)
+{
 
-            <div class="col-auto d-flex align-items-center justify-content-center">
-                <button type="button" class="btn btn-primary" @onclick="Get">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z" />
-                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
-                    </svg>
-                    Обновить список
-                </button>
-            </div>
-            <div class="col-auto d-flex align-items-center justify-content-center">
-                <button type="button" class="btn btn-primary" @onclick="Restart">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z" />
-                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
-                    </svg>
-                    Перезапустить расписание
-                </button>
+    <div class="card mb-3">
+        <div class="card-header">
+            <div class="row">
+
+                <div class="col d-flex align-items-center justify-content-start">
+                    <h5 class="m-0">
+                        Расписание работ
+                        @if (AppConfiguration.RefreshSecondsJobsUI is not null || AppConfiguration.RefreshSecondsJobsUI > 0)
+                        {
+                            <strong>[Авто обновление @AppConfiguration.RefreshSecondsJobsUI сек]</strong>
+                        }
+                    </h5>
+                </div>
+
+                <div class="col-auto d-flex align-items-center justify-content-center">
+                    <button type="button" class="btn btn-primary" @onclick="Get">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z" />
+                            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
+                        </svg>
+                        Обновить список
+                    </button>
+                </div>
+                <div class="col-auto d-flex align-items-center justify-content-center">
+                    <button type="button" class="btn btn-primary" @onclick="Restart">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z" />
+                            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
+                        </svg>
+                        Перезапустить расписание
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="card-body">
-        <table class="table table-bordered table-hover">
-            <thead>
-                <tr>
-                    <th scope="col">Навание</th>
-                    <th scope="col">Описание</th>
-                    <th scope="col">Группа</th>
-                    <th scope="col">Следующий запуск</th>
-                    <th scope="col">Предыдущий запуск</th>
-                    <th scope="col">Состояние</th>
-                    <th scope="col">Выполняется</th>
-                    <th scope="col">Кол-во</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Jobs?.Any() == true)
-                {
-                    @foreach (JobState item in Jobs)
+        <div class="card-body">
+            <table class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">Навание</th>
+                        <th scope="col">Описание</th>
+                        <th scope="col">Группа</th>
+                        <th scope="col">Следующий запуск</th>
+                        <th scope="col">Предыдущий запуск</th>
+                        <th scope="col">Состояние</th>
+                        <th scope="col">Выполняется</th>
+                        <th scope="col">Кол-во</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Jobs?.Any() == true)
                     {
-                        int index = Jobs.IndexOf(item);
+                        @foreach (JobState item in Jobs)
+                        {
+                            int index = Jobs.IndexOf(item);
 
-                        <tr data-bs-toggle="collapse" data-bs-target="#collapse_@index" class="accordion-toggle">
-                            <th scope="row">
-                                @if (item.Count > 0)
-                                {
-                                    <button class="btn btn-sm btn-outline-secondary me-2">+</button>
-                                }
-                                @item.Name
-                            </th>
-                            <td>@item.Description</td>
-                            <td>@item.Group</td>
-                            <td>@item.NextRun</td>
-                            <td>@item.LastRun</td>
-                            <td>@item.State</td>
-                            <td>@item.IsRunning</td>
-                            <td>@item.Count</td>
+                            <tr data-bs-toggle="collapse" data-bs-target="#collapse_@index" class="accordion-toggle">
+                                <th scope="row">
+                                    @if (item.Count > 0)
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary me-2">+</button>
+                                    }
+                                    @item.Name
+                                </th>
+                                <td>@item.Description</td>
+                                <td>@item.Group</td>
+                                <td>@item.NextRun</td>
+                                <td>@item.LastRun</td>
+                                <td>@item.State</td>
+                                <td>@item.IsRunning</td>
+                                <td>@item.Count</td>
+                            </tr>
+                            @if (item.Count > 0)
+                            {
+                                <tr>
+                                    <td colspan="8" class="p-0">
+                                        <div class="collapse" id="collapse_@index">
+                                            <table class="table table-bordered table-sm table-hover mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th scope="col">План</th>
+                                                        <th scope="col">Факт</th>
+                                                        <th scope="col">Работа</th>
+                                                        <th scope="col">Действия</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (JobState.StateInstanse instance in item.Instances ?? Array.Empty<JobState.StateInstanse>())
+                                                    {
+                                                        <tr>
+                                                            <td>@instance.StartTimeSchedule</td>
+                                                            <td>@instance.StartTime</td>
+                                                            <td>@instance.RunTime</td>
+                                                            <td>
+                                                                @{
+                                                                    var a = instance.Instance?.IsCancelJob();
+                                                                }
+                                                                @if (a?.IsCancel == true)
+                                                                {
+                                                                    <button type="button" class="btn btn-primary" @onclick="() => a?.CancelJob!.CancellationTokenSource.Cancel()">
+                                                                        Отменить
+                                                                    </button>
+                                                                }
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <th colspan="8">Нет запущенных работ</th>
                         </tr>
-                        @if(item.Count > 0)
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5>Запуск задания [Одноразовое]</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">Выбран</th>
+                        <th scope="col">Номер</th>
+                        <th scope="col">Название</th>
+                        <th scope="col">Описание</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Starters?.Any() == true)
+                    {
+                        @foreach (var item in Model.Starters)
                         {
                             <tr>
-                                <td colspan="8" class="p-0">
-                                    <div class="collapse" id="collapse_@index">
-                                        <table class="table table-bordered table-sm table-hover mb-0">
-                                            <thead>
-                                                <tr>
-                                                    <th scope="col">План</th>
-                                                    <th scope="col">Факт</th>
-                                                    <th scope="col">Работа</th>
-                                                    <th scope="col">Действия</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach (JobState.StateInstanse instance in item.Instances ?? Array.Empty<JobState.StateInstanse>())
-                                                {
-                                                    <tr>
-                                                        <td>@instance.StartTimeSchedule</td>
-                                                        <td>@instance.StartTime</td>
-                                                        <td>@instance.RunTime</td>
-                                                        <td>
-                                                            @{
-                                                                var a = instance.Instance?.IsCancelJob();
-                                                            }
-                                                            @if (a?.IsCancel == true)
-                                                            {
-                                                                <button type="button" class="btn btn-primary" @onclick="() => a?.CancelJob!.CancellationTokenSource.Cancel()">
-                                                                    Отменить
-                                                                </button>
-                                                            }
-                                                        </td>
-                                                    </tr>
-                                                }
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </td>
+                                <th>
+                                    <InputCheckbox @bind-Value="item.IsSelected" class="form-check-input" />
+                                </th>
+                                <th scope="row">@item.Starter.Id</th>
+                                <td>@item.Starter.JobName</td>
+                                <td>@item.Starter.Description</td>
                             </tr>
                         }
                     }
-                }
-                else
-                {
-                    <tr>
-                        <th colspan="8">Нет запущенных работ</th>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<div class="card">
-    <div class="card-header">
-        <h5>Запуск задания [Одноразовое]</h5>
-    </div>
-    <div class="card-body">
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th scope="col">Выбран</th>
-                    <th scope="col">Номер</th>
-                    <th scope="col">Название</th>
-                    <th scope="col">Описание</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.Starters?.Any() == true)
-                {
-                    @foreach (var item in Model.Starters)
+                    else
                     {
                         <tr>
-                            <th>
-                                <InputCheckbox @bind-Value="item.IsSelected" class="form-check-input" />
-                            </th>
-                            <th scope="row">@item.Starter.Id</th>
-                            <td>@item.Starter.JobName</td>
-                            <td>@item.Starter.Description</td>
+                            <th colspan="4">Нет работ для запуска</th>
                         </tr>
                     }
-                }
-                else
-                {
-                    <tr>
-                        <th colspan="4">Нет работ для запуска</th>
-                    </tr>
-                }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer">
+            <button type="submit" class="btn btn-primary" @onclick="StartJobs">
+                Запустить
+            </button>
+        </div>
     </div>
-    <div class="card-footer">
-        <button type="submit" class="btn btn-primary" @onclick="StartJobs">
-            Запустить
-        </button>
+
+}
+else
+{
+    <div class="col">
+        <div class="row">
+            <center>
+                Подождите, идет переход в интерактивный режим ...
+            </center>
+        </div>
+        <div class="row">
+            <div class="d-flex justify-content-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Загрузка...</span>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+}
 
 @code {
     List<JobState>? Jobs = null;
 
     public InputModel Model { get; set; } = new();
-    private int _refreshSeconds = 3;
+
     private Timer? _refreshTimer;
 
     protected override async Task OnInitializedAsync()
     {
-        await Get();
-        // Обновлять каждые N секунд
-        _refreshTimer = new Timer(async _ => await InvokeAsync(async () =>
+        if (RendererInfo.IsInteractive)
         {
             await Get();
-            StateHasChanged();
-        }), null, TimeSpan.Zero, TimeSpan.FromSeconds(_refreshSeconds));
+            if (AppConfiguration.RefreshSecondsJobsUI is not null || AppConfiguration.RefreshSecondsJobsUI > 0)
+            {
+                // Обновлять каждые N секунд
+                _refreshTimer = new Timer(async _ => await InvokeAsync(async () =>
+                {
+                    await Get();
+                    StateHasChanged();
+                }), null, TimeSpan.Zero, TimeSpan.FromSeconds(AppConfiguration.RefreshSecondsJobsUI.Value));
+            }
+        }
     }
     private async Task Get()
     {

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using WebWorkerService.Components;
+using WebWorkerService.Configurations;
 using WorkersLib;
 using WorkersLib.Models;
 
@@ -12,6 +13,8 @@ builder.Services.AddRazorComponents()
 
 // Регистрируем Jobs
 builder.AddWorkers();
+// конфиг приложения UI
+AppConfiguration.SetConfig(builder.Configuration);
 
 WebApplication app = builder.Build();
 
