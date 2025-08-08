@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Quartz;
+using Quartz.Impl.AdoJobStore.Common;
 using Quartz.Spi;
 
 namespace WorkersLib.Models
@@ -18,16 +19,12 @@ namespace WorkersLib.Models
 
         public IJob NewJob(TriggerFiredBundle bundle, IScheduler scheduler)
         {
-            using (var scope = serviceScopeFactory.CreateScope())
-            {
-                var job = scope.ServiceProvider.GetService(bundle.JobDetail.JobType) as IJob;
-                return job;
-            }
+            return new JobWrapper(serviceScopeFactory, bundle.JobDetail.JobType);
         }
 
         public void ReturnJob(IJob job)
         {
-            //Do something if need
+            (job as IDisposable)?.Dispose();
         }
     }
 }

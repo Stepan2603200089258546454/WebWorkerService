@@ -1,27 +1,33 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Quartz;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using WorkersLib.Jobs.BaseJobs;
+using WorkersLib.Services;
 
 namespace WorkersLib.Jobs
 {
-    public class TestJob1 : IJob
+    /// <summary>
+    /// Пример работы которая может работать параллельно [DI работает]
+    /// </summary>
+    public class TestJob1 : BaseConcurrentCancelJob
     {
-        private readonly IServiceScopeFactory serviceScopeFactory;
-        public TestJob1(IServiceScopeFactory serviceScopeFactory)
+        private readonly TestService _service;
+        public TestJob1(TestService service)
         {
-            this.serviceScopeFactory = serviceScopeFactory;
+            _service = service;
         }
-        public async Task Execute(IJobExecutionContext context)
+
+        protected override async Task RunAsync(CancellationToken cancellationToken = default)
         {
+            Console.WriteLine($"{DateTime.Now} [{_service.Id}] {nameof(TestJob1)} Start");
+            
             await Task.Delay(TimeSpan.FromSeconds(10));
-            //using (IServiceScope scope = serviceScopeFactory.CreateScope())
-            //{
-            //    MailServices services = scope.ServiceProvider.GetService<MailServices>();
-            //}
+            CancellationToken.ThrowIfCancellationRequested();
+            
+            await Task.Delay(TimeSpan.FromSeconds(10));
+            CancellationToken.ThrowIfCancellationRequested();
+            
+            await Task.Delay(TimeSpan.FromSeconds(10));
+            CancellationToken.ThrowIfCancellationRequested();
+            
+            Console.WriteLine($"{DateTime.Now} [{_service.Id}] {nameof(TestJob1)} End");
         }
     }
 }

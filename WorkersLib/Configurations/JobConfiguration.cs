@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using WorkersLib.Interfaces;
 
 namespace WorkersLib.Configurations
 {
@@ -25,6 +26,13 @@ namespace WorkersLib.Configurations
                 .GetSection("TestJob1Settings")?
                 ["Enabled"] ?? true.ToString());
             /// <summary>
+            /// Виден ли для разового старта
+            /// </summary>
+            public static bool VisibleOneStart => Convert.ToBoolean(configuration?
+                .GetSection("JobOption")?
+                .GetSection("TestJob1Settings")?
+                ["VisibleOneStart"] ?? true.ToString());
+            /// <summary>
             /// Расписание джоба
             /// </summary>
             public static string Cron => configuration?
@@ -41,6 +49,13 @@ namespace WorkersLib.Configurations
                 .GetSection("JobOption")?
                 .GetSection("TestJob2Settings")?
                 ["Enabled"] ?? true.ToString());
+            /// <summary>
+            /// Виден ли для разового старта
+            /// </summary>
+            public static bool VisibleOneStart => Convert.ToBoolean(configuration?
+                .GetSection("JobOption")?
+                .GetSection("TestJob2Settings")?
+                ["VisibleOneStart"] ?? true.ToString());
             /// <summary>
             /// Расписание джоба
             /// </summary>

@@ -1,4 +1,5 @@
 ﻿using Quartz;
+using System.Xml.Linq;
 using WorkersLib.Interfaces;
 
 namespace WorkersLib.Models
@@ -14,45 +15,49 @@ namespace WorkersLib.Models
             _type = typeof(T);
         }
         /// <summary>
-        /// 
+        /// Идентификатор
         /// </summary>
         public Guid Id { get; private set; }
         /// <summary>
-        /// 
+        /// Тип задачи
         /// </summary>
         public Type _type { get; private set; }
         /// <summary>
-        /// 
+        /// Имя задачи
         /// </summary>
         public string JobName => _type.Name;
         /// <summary>
-        /// 
+        /// Описание задачи
         /// </summary>
         public required string Description { get; set; }
         /// <summary>
-        /// 
+        /// Расписание
         /// </summary>
         public required string Cron { get; set; }
         /// <summary>
-        /// 
+        /// Включена к запуску
         /// </summary>
         public required bool Enabled { get; set; }
+        /// <summary>
+        /// Видима для одиночного запуска
+        /// </summary>
+        public required bool VisibleOneStart { get; set; }
 
-        public async void Start(IScheduler scheduler)
+        public async Task StartAsync(IScheduler scheduler)
         {
             await BaseStarterJob<T>.Start(
                 scheduler,
                 JobName,
-                DataScheduler.DefaultGroupJob,
+                DataScheduler.WorkGroupJob,
                 Description,
                 Cron);
         }
 
-        public async void StartNew(IScheduler scheduler)
+        public async Task StartNewAsync(IScheduler scheduler)
         {
             await BaseStarterJob<T>.Start(
                 scheduler,
-                JobName,
+                $"New Istanse [{JobName}] ({Guid.NewGuid()})",
                 DataScheduler.DefaultGroupJob,
                 Description);
         }

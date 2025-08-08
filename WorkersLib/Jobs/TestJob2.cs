@@ -1,23 +1,26 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Quartz;
+﻿using WorkersLib.Jobs.BaseJobs;
+using WorkersLib.Services;
 
 namespace WorkersLib.Jobs
 {
-    [DisallowConcurrentExecution]
-    public class TestJob2 : IJob
+    /// <summary>
+    /// Пример работы которая не может работать параллельно [DI работает]
+    /// </summary>
+    public class TestJob2 : BaseSingleJob
     {
-        private readonly IServiceScopeFactory serviceScopeFactory;
-        public TestJob2(IServiceScopeFactory serviceScopeFactory)
+        private readonly TestService _service;
+        public TestJob2(TestService service)
         {
-            this.serviceScopeFactory = serviceScopeFactory;
+            _service = service;
         }
-        public async Task Execute(IJobExecutionContext context)
+
+        protected override async Task RunAsync(CancellationToken cancellationToken = default)
         {
+            Console.WriteLine($"{DateTime.Now} [{_service.Id}] {nameof(TestJob2)} Start");
+            
             await Task.Delay(TimeSpan.FromSeconds(10));
-            //using (IServiceScope scope = serviceScopeFactory.CreateScope())
-            //{
-            //    MailServices services = scope.ServiceProvider.GetService<MailServices>();
-            //}
+            
+            Console.WriteLine($"{DateTime.Now} [{_service.Id}] {nameof(TestJob2)} End");
         }
     }
 }

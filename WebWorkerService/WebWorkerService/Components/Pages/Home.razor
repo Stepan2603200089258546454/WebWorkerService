@@ -6,12 +6,12 @@
 
 <PageTitle>Home</PageTitle>
 
-<div class="card">
+<div class="card mb-3">
     <div class="card-header">
         <div class="row">
 
             <div class="col d-flex align-items-center justify-content-start">
-                <h5 class="m-0">Расписание работ</h5>
+                <h5 class="m-0">Расписание работ [Авто обновление @_refreshSeconds сек]</h5>
             </div>
 
             <div class="col-auto d-flex align-items-center justify-content-center">
@@ -53,9 +53,14 @@
                 {
                     @foreach (JobState item in Jobs)
                     {
-                        <tr data-bs-toggle="collapse" data-bs-target="#@(item.Name + item.Group)" class="accordion-toggle">
+                        int index = Jobs.IndexOf(item);
+
+                        <tr data-bs-toggle="collapse" data-bs-target="#collapse_@index" class="accordion-toggle">
                             <th scope="row">
-                                <button class="btn btn-sm btn-outline-secondary me-2">+</button>
+                                @if (item.Count > 0)
+                                {
+                                    <button class="btn btn-sm btn-outline-secondary me-2">+</button>
+                                }
                                 @item.Name
                             </th>
                             <td>@item.Description</td>
@@ -70,22 +75,34 @@
                         {
                             <tr>
                                 <td colspan="8" class="p-0">
-                                    <div class="collapse" id="@(item.Name + item.Group)">
+                                    <div class="collapse" id="collapse_@index">
                                         <table class="table table-bordered table-sm table-hover mb-0">
                                             <thead>
                                                 <tr>
                                                     <th scope="col">План</th>
                                                     <th scope="col">Факт</th>
                                                     <th scope="col">Работа</th>
+                                                    <th scope="col">Действия</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach (JobState.StateInstanse instance in item.Instances)
+                                                @foreach (JobState.StateInstanse instance in item.Instances ?? Array.Empty<JobState.StateInstanse>())
                                                 {
                                                     <tr>
                                                         <td>@instance.StartTimeSchedule</td>
                                                         <td>@instance.StartTime</td>
                                                         <td>@instance.RunTime</td>
+                                                        <td>
+                                                            @{
+                                                                var a = instance.Instance?.IsCancelJob();
+                                                            }
+                                                            @if (a?.IsCancel == true)
+                                                            {
+                                                                <button type="button" class="btn btn-primary" @onclick="() => a?.CancelJob!.CancellationTokenSource.Cancel()">
+                                                                    Отменить
+                                                                </button>
+                                                            }
+                                                        </td>
                                                     </tr>
                                                 }
                                             </tbody>
@@ -109,7 +126,7 @@
 
 <div class="card">
     <div class="card-header">
-        <h5>Запуск джобов (одноразовое)</h5>
+        <h5>Запуск задания [Одноразовое]</h5>
     </div>
     <div class="card-body">
         <table class="table table-hover">
@@ -156,7 +173,7 @@
     List<JobState>? Jobs = null;
 
     public InputModel Model { get; set; } = new();
-
+    private int _refreshSeconds = 3;
     private Timer? _refreshTimer;
 
     protected override async Task OnInitializedAsync()
@@ -167,12 +184,12 @@
         {
             await Get();
             StateHasChanged();
-        }), null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
+        }), null, TimeSpan.Zero, TimeSpan.FromSeconds(_refreshSeconds));
     }
     private async Task Get()
     {
         Jobs = await DataScheduler.GetListJobAsync();
-        IEnumerable<IStarterJob> starter = DataScheduler.GetStarterJobs().Where(x => x.Enabled);
+        IEnumerable<IStarterJob> starter = DataScheduler.GetVisibleStarterJobs();
         Model.Starters = starter.Select(x => new StarterJob() { Starter = x, }).ToList();
     }
     private async Task Restart()

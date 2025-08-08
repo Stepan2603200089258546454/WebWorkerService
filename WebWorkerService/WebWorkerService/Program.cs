@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using WebWorkerService.Client.Pages;
 using WebWorkerService.Components;
 using WorkersLib;
 using WorkersLib.Models;
@@ -12,9 +11,9 @@ builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 
 // Регистрируем Jobs
-RegisterScheduler.Register(builder.Services, builder.Configuration);
+builder.AddWorkers();
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -39,7 +38,6 @@ app.MapRazorComponents<App>()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(typeof(WebWorkerService.Client._Imports).Assembly);
 
-//старт джобов
-await DataScheduler.Start(app.Services);
-
+// Запускаем задачи
+await app.RunWorkersAsync();
 app.Run();
