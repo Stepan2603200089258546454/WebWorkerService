@@ -6,7 +6,7 @@ namespace WorkersLib.Jobs
     /// <summary>
     /// Пример работы которая может работать параллельно [DI работает]
     /// </summary>
-    public class TestJob1 : BaseConcurrentCancelJob
+    public class TestJob1 : BaseSingleCancelJob
     {
         private readonly TestService _service;
         public TestJob1(TestService service)

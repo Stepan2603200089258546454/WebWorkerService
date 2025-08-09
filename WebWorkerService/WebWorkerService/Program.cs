@@ -14,7 +14,7 @@ builder.Services.AddRazorComponents()
 // Регистрируем Jobs
 builder.AddWorkers();
 // конфиг приложения UI
-AppConfiguration.SetConfig(builder.Configuration);
+builder.Services.AddSingleton<AppConfiguration>();
 
 WebApplication app = builder.Build();
 

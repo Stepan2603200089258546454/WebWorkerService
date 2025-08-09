@@ -2,6 +2,7 @@
 using Quartz;
 using Quartz.Impl.AdoJobStore.Common;
 using Quartz.Spi;
+using WorkersLib.Interfaces;
 
 namespace WorkersLib.Models
 {

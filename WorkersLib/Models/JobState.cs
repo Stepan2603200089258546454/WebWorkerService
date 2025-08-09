@@ -7,6 +7,7 @@
     {
         public class StateInstanse
         {
+            public string InstanceId { get; set; } = string.Empty;
             public DateTime? StartTime { get; set; }
             public DateTime? StartTimeSchedule { get; set; }
             public TimeSpan? RunTime { get; set; }

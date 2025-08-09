@@ -19,9 +19,9 @@
                 <div class="col d-flex align-items-center justify-content-start">
                     <h5 class="m-0">
                         Расписание работ
-                        @if (AppConfiguration.RefreshSecondsJobsUI is not null || AppConfiguration.RefreshSecondsJobsUI > 0)
+                        @if (EnableRefreshLists)
                         {
-                            <strong>[Авто обновление @AppConfiguration.RefreshSecondsJobsUI сек]</strong>
+                            <strong>[Авто обновление @Configuration.RefreshSecondsJobsUI сек]</strong>
                         }
                     </h5>
                 </div>
@@ -91,6 +91,7 @@
                                             <table class="table table-bordered table-sm table-hover mb-0">
                                                 <thead>
                                                     <tr>
+                                                        <th scope="col">Экземпляр</th>
                                                         <th scope="col">План</th>
                                                         <th scope="col">Факт</th>
                                                         <th scope="col">Работа</th>
@@ -101,6 +102,7 @@
                                                     @foreach (JobState.StateInstanse instance in item.Instances ?? Array.Empty<JobState.StateInstanse>())
                                                     {
                                                         <tr>
+                                                            <td>@instance.InstanceId</td>
                                                             <td>@instance.StartTimeSchedule</td>
                                                             <td>@instance.StartTime</td>
                                                             <td>@instance.RunTime</td>
@@ -110,7 +112,11 @@
                                                                 }
                                                                 @if (a?.IsCancel == true)
                                                                 {
-                                                                    <button type="button" class="btn btn-primary" @onclick="() => a?.CancelJob!.CancellationTokenSource.Cancel()">
+                                                                    <button 
+                                                                        type="button" 
+                                                                        class="btn btn-primary" 
+                                                                        disabled="@(a?.CancelJob?.CancellationToken.IsCancellationRequested ?? true)"
+                                                                        @onclick="() => a?.CancelJob!.CancellationTokenSource.Cancel()">
                                                                         Отменить
                                                                     </button>
                                                                 }
@@ -206,20 +212,23 @@ else
     public InputModel Model { get; set; } = new();
 
     private Timer? _refreshTimer;
+    [Inject]
+    public AppConfiguration Configuration { get; set; }
+    private bool EnableRefreshLists => Configuration.RefreshSecondsJobsUI is not null || Configuration.RefreshSecondsJobsUI > 0;
 
     protected override async Task OnInitializedAsync()
     {
         if (RendererInfo.IsInteractive)
         {
             await Get();
-            if (AppConfiguration.RefreshSecondsJobsUI is not null || AppConfiguration.RefreshSecondsJobsUI > 0)
+            if (EnableRefreshLists)
             {
                 // Обновлять каждые N секунд
                 _refreshTimer = new Timer(async _ => await InvokeAsync(async () =>
                 {
                     await Get();
                     StateHasChanged();
-                }), null, TimeSpan.Zero, TimeSpan.FromSeconds(AppConfiguration.RefreshSecondsJobsUI.Value));
+                }), null, TimeSpan.Zero, TimeSpan.FromSeconds(Configuration.RefreshSecondsJobsUI ?? 300));
             }
         }
     }

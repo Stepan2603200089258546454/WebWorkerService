@@ -30,7 +30,7 @@ namespace WorkersLib.Models
         /// <summary>
         /// Получить список запускальщиков джобов
         /// </summary>
-        private static List<IStarterJob> GetStarterJobs()
+        public static List<IStarterJob> GetStarterJobs()
         {
             if (_starterJobs is null or { Count: 0 })
             {
@@ -121,6 +121,8 @@ namespace WorkersLib.Models
                 }
             }
             // чистим расписание
+            IReadOnlyCollection<TriggerKey> jobTriggers = await scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
+            await scheduler.UnscheduleJobs(jobTriggers);
             IReadOnlyCollection<JobKey> jobKeys = await scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup());
             await scheduler.DeleteJobs(jobKeys);
             // запустим если не запускались
@@ -194,6 +196,7 @@ namespace WorkersLib.Models
                         IsRunning = runningJobKeys.Contains(jobKey),
                         Instances = execItems.OrderBy(x => x.FireTimeUtc).Select(x => new JobState.StateInstanse()
                         {
+                            InstanceId = x.FireInstanceId,
                             StartTime = x.FireTimeUtc.ToLocalTime().LocalDateTime,
                             StartTimeSchedule = x.ScheduledFireTimeUtc?.ToLocalTime().LocalDateTime,
                             RunTime = DateTime.UtcNow - x.FireTimeUtc,
