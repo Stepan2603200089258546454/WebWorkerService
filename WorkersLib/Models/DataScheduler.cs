@@ -26,11 +26,11 @@ namespace WorkersLib.Models
         /// <summary>
         /// Список посчитанных запускателей с настройками (нужно перегенирировать если нужно обновить
         /// </summary>
-        private static List<IStarterJob> _starterJobs = null;
+        private static IReadOnlyCollection<IStarterJob> _starterJobs = null;
         /// <summary>
         /// Получить список запускальщиков джобов
         /// </summary>
-        public static List<IStarterJob> GetStarterJobs()
+        public static IReadOnlyCollection<IStarterJob> GetStarterJobs()
         {
             if (_starterJobs is null or { Count: 0 })
             {
@@ -41,6 +41,7 @@ namespace WorkersLib.Models
                         Enabled = JobConfiguration.TestJob1Settings.Enabled,
                         Cron = JobConfiguration.TestJob1Settings.Cron,
                         VisibleOneStart = JobConfiguration.TestJob1Settings.VisibleOneStart,
+                        JobName = "Задача 1",
                         Description = "Тестовая задача 1",
                     },
                     new StarterJob<TestJob2>()
@@ -48,6 +49,7 @@ namespace WorkersLib.Models
                         Enabled = JobConfiguration.TestJob2Settings.Enabled,
                         Cron = JobConfiguration.TestJob2Settings.Cron,
                         VisibleOneStart = JobConfiguration.TestJob2Settings.VisibleOneStart,
+                        JobName = "Задача 2",
                         Description = "Тестовая задача 2",
                     },
                 };
@@ -58,17 +60,19 @@ namespace WorkersLib.Models
         /// Получить список доступных для одноразового запуска шаблонов
         /// </summary>
         /// <returns></returns>
-        public static List<IStarterJob> GetVisibleStarterJobs() 
+        public static IReadOnlyCollection<IStarterJob> GetVisibleStarterJobs() 
             => GetStarterJobs()?.Where(x => x.VisibleOneStart)?.ToList() ?? new List<IStarterJob>(capacity: 0);
         /// <summary>
         /// Запустить новый экземпляр (одиночное выполнение)
         /// </summary>
-        public static async void StartNew(Guid id)
+        public static async Task StartNewAsync(Guid id, CancellationToken cancellationToken = default)
         {
             IScheduler scheduler = await StdSchedulerFactory.GetDefaultScheduler();
+            if (cancellationToken.IsCancellationRequested) return;
             IStarterJob? starter = GetStarterJobs().FirstOrDefault(x => x.Id == id && x.VisibleOneStart);
-            if(starter is not null) 
-                await starter.StartNewAsync(scheduler);
+            if (cancellationToken.IsCancellationRequested) return;
+            if (starter is not null) 
+                await starter.StartNewAsync(scheduler, cancellationToken);
         }
         /// <summary>
         /// Запустить новые экземпляры (одиночное выполнение)
@@ -82,9 +86,8 @@ namespace WorkersLib.Models
 
             foreach (var item in _jobs)
             {
+                await item.StartNewAsync(scheduler, cancellationToken);
                 if (cancellationToken.IsCancellationRequested) return;
-
-                await item.StartNewAsync(scheduler);
             }
         }
         /// <summary>
@@ -93,27 +96,32 @@ namespace WorkersLib.Models
         public static async Task StartAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken = default)
         {
             IScheduler scheduler = await StdSchedulerFactory.GetDefaultScheduler(cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return;
             scheduler.JobFactory = serviceProvider.GetService<JobFactory>();
-            
-            // запустим если не запускались
+            // запустим если не запускались планировщик
             if (scheduler.IsStarted == false)
-                await scheduler.Start();
-
+                await scheduler.Start(cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return;
+            // запустим что можем
             foreach (var job in GetStarterJobs().Where(x => x.Enabled))
             {
-                await job.StartAsync(scheduler);
+                await job.StartAsync(scheduler, cancellationToken);
+                if (cancellationToken.IsCancellationRequested) return;
             }
         }
         /// <summary>
         /// Перезапуск расписания
         /// </summary>
-        public static async Task Restart()
+        public static async Task RestartAsync(CancellationToken cancellationToken = default)
         {
-            IScheduler scheduler = await StdSchedulerFactory.GetDefaultScheduler();
+            IScheduler scheduler = await StdSchedulerFactory.GetDefaultScheduler(cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return;
             // Посылаем отмену всем доступным задачам
-            IReadOnlyCollection<IJobExecutionContext> executingJobs = await scheduler.GetCurrentlyExecutingJobs();
+            IReadOnlyCollection<IJobExecutionContext> executingJobs = await scheduler.GetCurrentlyExecutingJobs(cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return;
             foreach (IJobExecutionContext execJob in executingJobs)
             {
+                if (cancellationToken.IsCancellationRequested) return;
                 (bool IsCancel, ICancelJob? CancelJob) res = (execJob.JobInstance as JobWrapper)?.IsCancelJob() ?? (false, null);
                 if (res.IsCancel)
                 {
@@ -121,46 +129,58 @@ namespace WorkersLib.Models
                 }
             }
             // чистим расписание
-            IReadOnlyCollection<TriggerKey> jobTriggers = await scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
-            await scheduler.UnscheduleJobs(jobTriggers);
-            IReadOnlyCollection<JobKey> jobKeys = await scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup());
-            await scheduler.DeleteJobs(jobKeys);
+            IReadOnlyCollection<TriggerKey> jobTriggers = await scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup(), cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return;
+            await scheduler.UnscheduleJobs(jobTriggers, cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return;
+            IReadOnlyCollection<JobKey> jobKeys = await scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup(), cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return;
+            await scheduler.DeleteJobs(jobKeys, cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return;
             // запустим если не запускались
             if (scheduler.IsStarted == false)
-                await scheduler.Start();
+                await scheduler.Start(cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return;
             // запускаем расписание по новой
-            _starterJobs.Clear();
+            _starterJobs = new List<IStarterJob>();
             foreach (var job in GetStarterJobs().Where(x => x.Enabled))
             {
-                await job.StartAsync(scheduler);
+                await job.StartAsync(scheduler, cancellationToken);
+                if (cancellationToken.IsCancellationRequested) return;
             }
         }
         /// <summary>
         /// Получить информацию по запущенным джобам
         /// </summary>
-        public static async Task<List<JobState>> GetListJobAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public static async Task<List<JobState>> GetListJobAsync(CancellationToken cancellationToken = default)
         {
             List<JobState> result = new List<JobState>();
 
             IScheduler scheduler = await StdSchedulerFactory.GetDefaultScheduler(cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return result;
             // Получаем список групп
-            IReadOnlyCollection<string> jobGroups = await scheduler.GetJobGroupNames();
+            IReadOnlyCollection<string> jobGroups = await scheduler.GetJobGroupNames(cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return result;
             // Получаем все исполняющиеся в данный момент задачи
-            IReadOnlyCollection<IJobExecutionContext> executingJobs = await scheduler.GetCurrentlyExecutingJobs();
+            IReadOnlyCollection<IJobExecutionContext> executingJobs = await scheduler.GetCurrentlyExecutingJobs(cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return result;
             // Получаем уникальные ключи
             HashSet<JobKey> runningJobKeys = executingJobs.Select(j => j.JobDetail.Key).ToHashSet();
             // Проходим по группам
             foreach (string group in jobGroups)
             {
                 // Получаем ключи в этой группе
-                IReadOnlyCollection<JobKey> jobKeys = await scheduler.GetJobKeys(GroupMatcher<JobKey>.GroupEquals(group));
+                IReadOnlyCollection<JobKey> jobKeys = await scheduler.GetJobKeys(GroupMatcher<JobKey>.GroupEquals(group), cancellationToken);
+                if (cancellationToken.IsCancellationRequested) return result;
                 // Проходим по ключам
                 foreach (JobKey jobKey in jobKeys)
                 {
                     // Получаем детали задачи
-                    IJobDetail? detail = await scheduler.GetJobDetail(jobKey);
+                    IJobDetail? detail = await scheduler.GetJobDetail(jobKey, cancellationToken);
+                    if (cancellationToken.IsCancellationRequested) return result;
                     // Получаем триггеры для ключа
-                    IReadOnlyCollection<ITrigger> triggers = await scheduler.GetTriggersOfJob(jobKey);
+                    IReadOnlyCollection<ITrigger> triggers = await scheduler.GetTriggersOfJob(jobKey, cancellationToken);
+                    if (cancellationToken.IsCancellationRequested) return result;
                     // Получаем смещение следующего запуска
                     DateTimeOffset? nextFireTime = triggers
                         .Select(t => t.GetNextFireTimeUtc())
@@ -172,7 +192,8 @@ namespace WorkersLib.Models
                         .Where(t => t.HasValue)
                         .Max(); // Последний запуск
                     // Получаем состояние тириггера
-                    TriggerState triggerState = await scheduler.GetTriggerState(triggers.FirstOrDefault()?.Key);
+                    TriggerState triggerState = await scheduler.GetTriggerState(triggers.FirstOrDefault()?.Key, cancellationToken);
+                    if (cancellationToken.IsCancellationRequested) return result;
                     // Получаем запущенные задачи по ключу
                     IEnumerable<IJobExecutionContext> execItems = executingJobs.Where(j => j.JobDetail.Key == jobKey);
                     // Добавляем модель

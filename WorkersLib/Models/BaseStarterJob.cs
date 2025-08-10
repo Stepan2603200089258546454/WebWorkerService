@@ -64,16 +64,18 @@ namespace WorkersLib.Models
         /// <summary>
         /// Запустить одиночное выполнение
         /// </summary>
-        public static async Task Start(IScheduler scheduler, string name, string group, string description)
+        public static async Task Start(IScheduler scheduler, string name, string group, string description, CancellationToken cancellationToken = default)
         {
-            await scheduler.ScheduleJob(CreateJobDetails(name, group, description), CreateJobTrigger(name, group, description));
+            if (cancellationToken.IsCancellationRequested) return;
+            await scheduler.ScheduleJob(CreateJobDetails(name, group, description), CreateJobTrigger(name, group, description), cancellationToken);
         }
         /// <summary>
         /// Запустить выполнение по расписанию
         /// </summary>
-        public static async Task Start(IScheduler scheduler, string name, string group, string description, string cron)
+        public static async Task Start(IScheduler scheduler, string name, string group, string description, string cron, CancellationToken cancellationToken = default)
         {
-            await scheduler.ScheduleJob(CreateJobDetails(name, group, description), CreateJobTrigger(name, group, description, cron));
+            if (cancellationToken.IsCancellationRequested) return;
+            await scheduler.ScheduleJob(CreateJobDetails(name, group, description), CreateJobTrigger(name, group, description, cron), cancellationToken);
         }
     }
 }

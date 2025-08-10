@@ -21,7 +21,7 @@
                         Расписание работ
                         @if (EnableRefreshLists)
                         {
-                            <strong>[Авто обновление @Configuration.RefreshSecondsJobsUI сек]</strong>
+                            <span>[Авто обновление @Configuration.RefreshSecondsJobsUI сек]</span>
                         }
                     </h5>
                 </div>
@@ -50,7 +50,7 @@
             <table class="table table-bordered table-hover">
                 <thead>
                     <tr>
-                        <th scope="col">Навание</th>
+                        <th scope="col">Название</th>
                         <th scope="col">Описание</th>
                         <th scope="col">Группа</th>
                         <th scope="col">Следующий запуск</th>
@@ -181,7 +181,7 @@
             </table>
         </div>
         <div class="card-footer">
-            <button type="submit" class="btn btn-primary" @onclick="StartJobs">
+            <button type="submit" class="btn btn-primary" @onclick="StartJobs" disabled="@(Model?.Starters?.Any(x => x.IsSelected) == false)">
                 Запустить
             </button>
         </div>
@@ -207,13 +207,14 @@ else
 }
 
 @code {
-    List<JobState>? Jobs = null;
-
-    public InputModel Model { get; set; } = new();
-
-    private Timer? _refreshTimer;
     [Inject]
     public AppConfiguration Configuration { get; set; }
+
+    private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+    private CancellationToken cancellationToken => cancellationTokenSource.Token;
+    private List<JobState>? Jobs = null;
+    private InputModel Model { get; set; } = new();
+    private Timer? _refreshTimer;
     private bool EnableRefreshLists => Configuration.RefreshSecondsJobsUI is not null || Configuration.RefreshSecondsJobsUI > 0;
 
     protected override async Task OnInitializedAsync()
@@ -226,6 +227,7 @@ else
                 // Обновлять каждые N секунд
                 _refreshTimer = new Timer(async _ => await InvokeAsync(async () =>
                 {
+                    if (cancellationToken.IsCancellationRequested) return;
                     await Get();
                     StateHasChanged();
                 }), null, TimeSpan.Zero, TimeSpan.FromSeconds(Configuration.RefreshSecondsJobsUI ?? 300));
@@ -234,26 +236,31 @@ else
     }
     private async Task Get()
     {
-        Jobs = await DataScheduler.GetListJobAsync();
+        Jobs = await DataScheduler.GetListJobAsync(cancellationToken);
+        if (cancellationToken.IsCancellationRequested) return;
         IEnumerable<IStarterJob> starter = DataScheduler.GetVisibleStarterJobs();
         Model.Starters = starter.Select(x => new StarterJob() { Starter = x, }).ToList();
     }
     private async Task Restart()
     {
-        await DataScheduler.Restart();
+        await DataScheduler.RestartAsync(cancellationToken);
+        if (cancellationToken.IsCancellationRequested) return;
         await Get();
     }
     private async Task StartJobs()
     {
         IEnumerable<Guid> guids = Model.Starters.Where(s => s.IsSelected).Select(x => x.Starter.Id);
-        await DataScheduler.StartNewAsync(guids);
+        await DataScheduler.StartNewAsync(guids, cancellationToken);
+        if (cancellationToken.IsCancellationRequested) return;
         await Get();
     }
     void IDisposable.Dispose()
     {
+        cancellationTokenSource?.Cancel();
         Jobs?.Clear();
-        Model = new();
+        Model = null;
         _refreshTimer?.Dispose();
+        cancellationTokenSource?.Dispose();
         GC.Collect();
         // GC.SuppressFinalize(this);
     }
