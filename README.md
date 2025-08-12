@@ -70,3 +70,14 @@ await app.RunWorkersAsync();
 
 - __BaseConcurrentCancelJob__  
 Реализация отменяемой мультистартовой задачи.
+
+Установить как службу  
+Win  
+https://learn.microsoft.com/ru-ru/aspnet/core/host-and-deploy/windows-service?view=aspnetcore-9.0&tabs=visual-studio
+
+
+
+
+
+
+

@@ -22,6 +22,8 @@ builder.Services.AddSingleton<AppConfiguration>();
 builder.Services.AddHttpClient();
 //MS openAPI
 builder.Services.AddOpenApi();
+// Регистрация как WinService
+builder.Services.AddWindowsService();
 
 WebApplication app = builder.Build();
 

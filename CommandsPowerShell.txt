@@ -1,0 +1,15 @@
+New-Service -Name {SERVICE NAME} -BinaryPathName "{EXE FILE PATH} --contentRoot {EXE FOLDER PATH}" -Credential "{DOMAIN OR COMPUTER NAME\USER}" -Description "{DESCRIPTION}" -DisplayName "{DISPLAY NAME}" -StartupType Automatic
+Start-Service -Name {SERVICE NAME}
+Get-Service -Name {SERVICE NAME}
+Stop-Service -Name {SERVICE NAME}
+Remove-Service -Name {SERVICE NAME}
+
+
+New-Service -Name WorkService -BinaryPathName "C:\inetpub\wwwroot\MicroservicesApp\WorkerService\WebWorkerService.exe --contentRoot C:\inetpub\wwwroot\MicroservicesApp\WorkerService" -Description "Тестовый сервис задач" -DisplayName "WorkService" -StartupType Automatic
+Start-Service -Name WorkService
+Get-Service -Name WorkService
+Stop-Service -Name WorkService
+Remove-Service -Name WorkService 
+sc delete WorkService
+
+http://localhost:5000/
